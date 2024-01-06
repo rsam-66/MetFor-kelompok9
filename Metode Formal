@@ -1,0 +1,77 @@
+sig Text {}
+sig EncryptedText {}
+sig Number{}
+
+one sig User {
+	username: Text,
+	email: Text,
+	credential: SignIn,
+}
+
+one sig SignIn{
+	username: Text,
+	password: EncryptedText,
+	weatherinfo: WeatherPage
+}
+
+sig BMKG{
+	cuaca: Text,
+	suhu: Number,
+	arahangain: Text,
+	jam: Number,
+	tanggal: Text
+}
+
+sig WeatherInfo extends BMKG{
+
+}
+
+sig WeatherPage extends WeatherInfo{
+
+}
+
+assert UserUniqueness {
+  all u1, u2: User | u1.username != u2.username => u1 = u2
+}
+
+assert PasswordEncryption {
+  all s: SignIn | s.password in EncryptedText
+}
+
+// Ensure weather information is consistent across SignIn and WeatherPage
+assert ConsistentWeatherInfo {
+  all s: SignIn, wp: WeatherPage | 
+    s.weatherinfo = wp => s.weatherinfo.cuaca = wp.cuaca &&
+                         s.weatherinfo.suhu = wp.suhu &&
+                         s.weatherinfo.arahangain = wp.arahangain &&
+                         s.weatherinfo.jam = wp.jam &&
+                         s.weatherinfo.tanggal = wp.tanggal
+}
+
+// Ensure fields have appropriate data types
+assert UsernameIsText {
+  all u: User | u.username in Text
+}
+
+assert EmailIsText {
+  all u: User | u.email in Text
+}
+
+assert SuhuIsNumber {
+  all b: BMKG | b.suhu in Number
+}
+
+// ... and so on for other fields
+
+assert UserHasOneSignIn {
+  all u: User | one s: SignIn | u.credential = s
+}
+
+// Ensure each SignIn has weather information
+assert SignInHasWeatherInfo {
+  all s: SignIn | one wp: WeatherPage | s.weatherinfo = wp
+}
+
+
+
+run { } for 1
