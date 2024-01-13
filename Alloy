@@ -1,77 +1,115 @@
 sig Text {}
 sig EncryptedText {}
-sig Number{}
 
-one sig User {
-	username: Text,
-	email: Text,
-	credential: SignIn,
+sig User {
+	id: one Text,
+	username: one Text,
+	password: one EncryptedText,
 }
 
-one sig SignIn{
+sig SignIn {
+	profile: User,
 	username: Text,
-	password: EncryptedText,
-	weatherinfo: WeatherPage
+	password: EncryptedText
 }
 
-sig BMKG{
+sig SignInService {
+	signin: SignIn
+}
+
+sig Weather {
+	user: User,
 	cuaca: Text,
-	suhu: Number,
-	arahangain: Text,
-	jam: Number,
-	tanggal: Text
+	suhu: Int,
+	tanggal: Int,
+	arahangin: Text
 }
 
-sig WeatherInfo extends BMKG{
-
+sig Traffic {
+	user: User,
+	levelkemacetan: Text,
+	kecepatanrata2: Int
 }
 
-sig WeatherPage extends WeatherInfo{
-
+//pred
+//memeriksa apakah user yang terkait dengan weather termasuk dalam himpunan user
+pred validweatheruser[w: Weather]{
+	w.user in User
 }
 
-assert UserUniqueness {
-  all u1, u2: User | u1.username != u2.username => u1 = u2
+//memeriksa apakah user yang terkait dengan traffic termasuk dalam himpunan user
+pred validtrafficuser[t: Traffic]{
+	t.user in User
 }
 
-assert PasswordEncryption {
-  all s: SignIn | s.password in EncryptedText
+pred validsigninservice[s: SignInService]{
+	s.signin in SignIn
 }
 
-// Ensure weather information is consistent across SignIn and WeatherPage
-assert ConsistentWeatherInfo {
-  all s: SignIn, wp: WeatherPage | 
-    s.weatherinfo = wp => s.weatherinfo.cuaca = wp.cuaca &&
-                         s.weatherinfo.suhu = wp.suhu &&
-                         s.weatherinfo.arahangain = wp.arahangain &&
-                         s.weatherinfo.jam = wp.jam &&
-                         s.weatherinfo.tanggal = wp.tanggal
+//fakta
+fact {
+	all s: SignInService | one s.signin 
+	all s1, s2: SignIn | s1 != s2 => s1.username != s2.username 
+	all u1, u2: User | u1 != u2 => u1.id != u2.id 
+	all s: SignIn | s.profile in User 
+	some s1, s2: SignInService | s1 != s2 
+	some u1, u2: User | u1 != u2 
+
+    // Setiap objek Weather terkait dengan satu dan hanya satu objek User
+    all w: Weather | one w.user
+
+    // Setiap objek Traffic terkait dengan satu dan hanya satu objek User
+    all t: Traffic | one t.user
+
+    // Setiap objek SignIn terkait dengan satu dan hanya satu objek User
+    all s: SignIn | one s.profile
+
+    // Setiap objek SignIn terkait dengan objek User yang memiliki username yang sesuai
+    all s: SignIn | s.username = s.profile.username
+
+    // Setiap objek SignIn terkait dengan objek User yang memiliki password yang sesuai
+    all s: SignIn | s.password = s.profile.password
+
+    // Tidak ada objek Weather yang memiliki tanggal negatif
+    all w: Weather | w.tanggal >= 0
+
+    // Tidak ada objek Traffic yang memiliki kecepatan rata-rata negatif
+    all t: Traffic | t.kecepatanrata2 >= 0
 }
 
-// Ensure fields have appropriate data types
-assert UsernameIsText {
-  all u: User | u.username in Text
+//assertion
+assert UniqueUsernames {
+  all u1, u2: User | u1 != u2 => u1.username != u2.username
+}
+//memeriksa bahwa setiap pengguna memiliki nama pengguna yang unik.
+
+assert UniqueUserIds {
+  all u1, u2: User | u1 != u2 => u1.id != u2.id
+}
+//memeriksa bahwa setiap pengguna memiliki ID yang unik
+
+assert WeatherBelongsToUser {
+  all w: Weather | validweatheruser[w]
+}
+//memastikan bahwa setiap entitas cuaca terkait dengan pengguna yang valid
+
+assert TrafficBelongsToUser {
+  all t: Traffic | t.user in User
+}
+//memastikan bahwa setiap entitas lalu lintas terkait dengan pengguna yang valid
+
+assert NoDuplicateSignIn {
+  no disj s1, s2: SignIn | s1.username = s2.username and s1.password = s2.password
+}
+//memastikan bahwa tidak ada dua objek SignIn dengan username dan password yang sama
+
+assert WeatherTemperatureInRange {
+  all w: Weather | w.suhu >= -50 and w.suhu <= 50
 }
 
-assert EmailIsText {
-  all u: User | u.email in Text
+pred show() {
+	 some w: Weather | validweatheruser[w]
+ 	 some t: Traffic | validtrafficuser[t]
 }
 
-assert SuhuIsNumber {
-  all b: BMKG | b.suhu in Number
-}
-
-// ... and so on for other fields
-
-assert UserHasOneSignIn {
-  all u: User | one s: SignIn | u.credential = s
-}
-
-// Ensure each SignIn has weather information
-assert SignInHasWeatherInfo {
-  all s: SignIn | one wp: WeatherPage | s.weatherinfo = wp
-}
-
-
-
-run { } for 1
+run show for 1
