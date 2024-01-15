@@ -112,4 +112,4 @@ pred show() {
  	 some t: Traffic | validtrafficuser[t]
 }
 
-run show for 1
+run show for 2
